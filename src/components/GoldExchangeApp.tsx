@@ -1,45 +1,48 @@
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import axios from "axios";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
-import { ChevronDown } from "lucide-react";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Select, { SelectChangeEvent } from "@mui/material/Select";
+import {
+  Button,
+  CircularProgress,
+  MenuItem,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { JSX } from "@emotion/react/jsx-runtime";
 
 interface GoldApiResponse {
   price: number;
 }
 
-export default function GoldExchangeApp() {
+export default function GoldExchangeApp(): JSX.Element {
   const [goldPriceUSD, setGoldPriceUSD] = useState<number | null>(null);
   const [amount, setAmount] = useState<number>(1);
   const [karat, setKarat] = useState<number>(24);
   const [convertedPrice, setConvertedPrice] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [currency, setCurrency] = useState("AZN");
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date("2025-04-01"));
+  const [selectedDate, setSelectedDate] = useState<string>("2025-04-01");
 
-  const [usdToAznRate, setUsdToAznRate] = useState<number>(1.7);
-  const [usdToTryRate, setUsdToTryRate] = useState<number | null>(null);
+  const [usdToAznRate, setUsdToAznRate] = useState<number>(1.7); // Hardcoded but could be fetched
+  const [usdToTryRate, setUsdToTryRate] = useState<number>(null);
 
-  const fetchInitialData = async (date: Date): Promise<void> => {
+  const fetchInitialData = async (date: string): Promise<void> => {
     setLoading(true);
     try {
-      const formattedDate = format(date, "yyyy-MM-dd");
       const [goldResponse, forexResponse] = await Promise.all([
         axios.get<GoldApiResponse>(
-          `https://www.goldapi.io/api/XAU/USD/${formattedDate}`,
+          `https://www.goldapi.io/api/XAU/USD/${date}`,
           {
-            // headers: {
-            //   "x-access-token": "goldapi-17u0bism9tjxq17-io",
-            //   "Content-Type": "application/json",
-            // },
+            headers: {
+              "x-access-token": "goldapi-17u0bism9tjxq17-io",
+              "Content-Type": "application/json",
+            },
           }
         ),
         axios.get(
-          // "https://api.fastforex.io/fetch-multi?from=USD&to=TRY&api_key=0b0a2773d7-070035cbba-sv5v3w"
-          "httpss://api.fastforex.io/fetch-multi?from=USD&to=TRY&api_key=0b0a2773d7-070035cbba-sv5v3w"
+          "https://api.fastforex.io/fetch-multi?from=USD&to=TRY&api_key=40924545ce-7de893c06b-svw4um"
         ),
       ]);
 
@@ -60,7 +63,7 @@ export default function GoldExchangeApp() {
     if (currency === "USD") return goldPriceUSD;
     if (currency === "AZN") return goldPriceUSD * usdToAznRate;
     if (currency === "TRY" && usdToTryRate) return goldPriceUSD * usdToTryRate;
-    return goldPriceUSD;
+    return goldPriceUSD; // fallback
   };
 
   useEffect(() => {
@@ -74,61 +77,97 @@ export default function GoldExchangeApp() {
     setConvertedPrice((adjustedPrice * amount).toFixed(2));
   };
 
+  const handleAmountChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    setAmount(Number(e.target.value));
+  };
+
+  const handleKaratChange = (e: SelectChangeEvent<string>): void => {
+    setKarat(Number(e.target.value));
+  };
+
+  const handleDateChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    setSelectedDate(e.target.value);
+  };
+
+  const handleCurrencyChange = (e: SelectChangeEvent<string>): void => {
+    setCurrency(e.target.value);
+    setConvertedPrice(null); // Reset old conversion
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r ">
-      <Card className="w-full max-w-md shadow-xl rounded-3xl p-8">
-        <CardContent className="flex flex-col gap-6">
-          <h1 className="text-2xl font-extrabold text-center text-gray-800">Gold Price Converter</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-yellow-100 to-yellow-200 p-6">
+      <Card className="w-full max-w-md shadow-lg rounded-2xl">
+        <CardContent className="flex flex-col gap-4">
+          <Typography variant="h5" component="h1" align="center">
+            Gold Price Converter
+          </Typography>
+          <TextField
+            type="date"
+            value={selectedDate}
+            onChange={handleDateChange}
+            fullWidth
+            variant="outlined"
+            margin="normal"
+            InputLabelProps={{
+              shrink: true,
+            }}
+          />
 
           {loading ? (
-            <div className="text-center text-gray-500">Loading...</div>
-          ) : !goldPriceUSD ? (
+            <div className="flex justify-center">
+              <CircularProgress />
+            </div>
+          ) : goldPriceUSD ? (
             <>
-              <p className="text-green-600 text-center text-lg">
-                {amount}g {karat}K = {convertedPrice ? `${convertedPrice} ${currency}` : "?"}
-              </p>
+              <Typography className="text-green-600" variant="h6" align="center">
+                {amount} gram {karat}K = {convertedPrice ? `${convertedPrice} ${currency}` : "?"}
+              </Typography>
 
-              <Input
+              <TextField
                 type="number"
                 value={amount}
-                onChange={(e) => setAmount(Number(e.target.value))}
-                placeholder="Amount (g)"
-                className="rounded-xl shadow-sm"
+                onChange={handleAmountChange}
+                placeholder="Amount (grams)"
+                fullWidth
+                variant="outlined"
+                margin="normal"
               />
 
-              <div className="flex flex-col gap-4">
-                <Select value={String(karat)} onValueChange={(value) => setKarat(Number(value))}>
-                  <SelectTrigger className="rounded-xl shadow-sm flex items-center justify-between">
-                    <SelectValue placeholder="Select Karat" />
-                    <ChevronDown className="h-4 w-4 ml-2" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl shadow-lg">
-                    <SelectItem value="24">24K</SelectItem>
-                    <SelectItem value="22">22K</SelectItem>
-                    <SelectItem value="18">18K</SelectItem>
-                    <SelectItem value="14">14K</SelectItem>
-                  </SelectContent>
-                </Select>
+              <Select
+                value={String(karat)}
+                onChange={handleKaratChange}
+                fullWidth
+                variant="outlined"
+              >
+                <MenuItem value={24}>24K</MenuItem>
+                <MenuItem value={22}>22K</MenuItem>
+                <MenuItem value={18}>18K</MenuItem>
+                <MenuItem value={14}>14K</MenuItem>
+              </Select>
 
-                <Select value={currency} onValueChange={(value) => setCurrency(value)}>
-                  <SelectTrigger className="rounded-xl shadow-sm flex items-center justify-between">
-                    <SelectValue placeholder="Select Currency" />
-                    <ChevronDown className="h-4 w-4 ml-2" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl shadow-lg">
-                    <SelectItem value="AZN">AZN</SelectItem>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="TRY">TRY</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select
+                value={currency}
+                onChange={handleCurrencyChange}
+                fullWidth
+                variant="outlined"
+              >
+                <MenuItem value="AZN">AZN</MenuItem>
+                <MenuItem value="USD">USD</MenuItem>
+                <MenuItem value="TRY">TRY</MenuItem>
+              </Select>
 
-              <Button onClick={handleConvert} className="w-full mt-4 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600">
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleConvert}
+              >
                 Convert
               </Button>
             </>
           ) : (
-            <p className="text-red-500 text-center">Price not found.</p>
+            <Typography className="text-red-500" align="center">
+              Price not found.
+            </Typography>
           )}
         </CardContent>
       </Card>
