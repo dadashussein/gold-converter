@@ -25,8 +25,8 @@ export default function GoldExchangeApp(): JSX.Element {
   const [currency, setCurrency] = useState("AZN");
   const [selectedDate, setSelectedDate] = useState<string>("2025-04-01");
 
-  const [usdToAznRate, setUsdToAznRate] = useState<number>(1.7); // Hardcoded but could be fetched
-  const [usdToTryRate, setUsdToTryRate] = useState<number>(null);
+  const [usdToAznRate] = useState<number>(1.7); // Hardcoded but could be fetched
+  const [usdToTryRate, setUsdToTryRate] = useState<number | null>(null);
 
   const fetchInitialData = async (date: string): Promise<void> => {
     setLoading(true);
